@@ -5,7 +5,7 @@ const fastify = Fastify({
 })
 
 // Declare a route
-fastify.get('/', async function handler (request, reply) {
+fastify.get('/api/v1/ping', async function handler (request, reply) {
   return { hello: 'world' }
 })
 
