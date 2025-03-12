@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import ObjectStreaming from "./ObjectStreaming";
 
 export default function Home() {
   const [pingResult, setPingResult] = useState<{ hello?: string } | null>(null);
@@ -36,6 +37,10 @@ export default function Home() {
         ) : (
           <p>Pinging server...</p>
         )}
+      </div>
+
+      <div className="w-full max-w-2xl mx-auto p-6 space-y-6">
+        <ObjectStreaming />
       </div>
     </div>
   );
