@@ -1,7 +1,10 @@
 import { openai } from '@ai-sdk/openai'
-import { createDataStream, streamObject, streamText } from 'ai'
-import Fastify from 'fastify'
+import { generateObject, streamObject } from 'ai'
+import Fastify, { FastifyReply } from 'fastify'
 import { z } from 'zod'
+import dotenv from 'dotenv'
+
+dotenv.config()
 
 const fastify = Fastify({
   logger: {
@@ -16,54 +19,41 @@ const fastify = Fastify({
 // Declare a route
 fastify.get('/api/v1/ping', async function handler (request, reply) {
   return { hello: 'world' }
-})
+});
+
+const schema = z.object({
+  name: z.string(),
+  description: z.string(),
+  traditions: z.array(z.string()),
+});
+
+const generate = async () => {
+  const result = await generateObject({
+    model: openai('gpt-4o-mini'),
+    prompt: 'Invent a new holiday and describe 10 of its traditions.',
+    schema,
+  });
+  return result.object;
+}
+
+const stream = async (reply: FastifyReply) => {
+  const result = streamObject({
+    model: openai('gpt-4o-mini'),
+    prompt: 'Invent a new holiday and describe 10 of its traditions.',
+    schema,
+  });
+
+  reply.header('X-Vercel-AI-Data-Stream', 'v1');
+  reply.header("Content-Type", "text/event-stream");
+  return reply.send(result.textStream)
+}
 
 fastify.post('/api/v1/stream-object', async function handler (request, reply) {
-  try {
+  return stream(reply);
+})
 
-  //  const dataStream = createDataStream({
-  //   execute: async dataStreamWriter => {
-  //     dataStreamWriter.writeData('initialized call');
-
-  //     const result = await streamObject({
-  //       model: openai('gpt-4o-mini'),
-  //       prompt: 'Invent a new holiday and describe its traditions.',
-  //       // schema: z.object({
-  //       //   name: z.string(),
-  //       //   description: z.string(),
-  //       //   traditions: z.array(z.string()),
-  //       // }),
-  //       output: 'no-schema',
-  //     });
-
-  //     result.pipeTextStreamToResponse();
-
-  //     // result.mergeIntoDataStream(dataStreamWriter);
-  //   },
-  //   onError: error => {
-  //     // Error messages are masked by default for security reasons.
-  //     // If you want to expose the error message to the client, you can do so here:
-  //     return error instanceof Error ? error.message : String(error);
-  //   },
-  //  })
-
-    const result = await streamObject({
-      model: openai('gpt-4o-mini'),
-      prompt: 'Invent a new holiday and describe its traditions.',
-      schema: z.object({
-        name: z.string(),
-        description: z.string(),
-        traditions: z.array(z.string()),
-      }),
-    });
-    
-    reply.header('X-Vercel-AI-Data-Stream', 'v1');
-    reply.header('Content-Type', 'text/plain; charset=utf-8');
-    return reply.send(result.toTextStreamResponse())
-  } catch (error) {
-    console.error('Error:', error);
-    return reply.status(500).send({ error: 'Internal server error' });
-  }
+fastify.post('/api/v1/generate-object', async function handler (request, reply) {
+  return generate();
 })
 
 // Run the server!

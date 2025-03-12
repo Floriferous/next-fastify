@@ -1,22 +1,55 @@
 import { experimental_useObject as useObject } from '@ai-sdk/react';
 import { z } from 'zod';
 
+const schema = z.object({
+  name: z.string(),
+  description: z.string(),
+  traditions: z.array(z.string()),
+});
+
 function ObjectStreaming() {
-  const { object, error, isLoading, submit } = useObject({
+  const {
+    object: streamedObject,
+    error: streamError,
+    isLoading: isStreaming,
+    submit: submitStream
+  } = useObject({
     api: '/api/v1/stream-object',
-    schema: z.object({
-      name: z.string(),
-      description: z.string(),
-      traditions: z.array(z.string()),
-    }),
+    schema,
   });
-  console.log('error:', error);
-  console.log('object:', object);
+
+  const {
+    object: generatedObject,
+    error: generateError,
+    isLoading: isGenerating,
+    submit: submitGenerate
+  } = useObject({
+    api: '/api/v1/generate-object',
+    schema,
+  });
+
+  const object = streamedObject || generatedObject;
+  const error = streamError || generateError;
+  const isLoading = isStreaming || isGenerating;
 
   return (
     <div className="max-w-2xl mx-auto p-6 space-y-6">
-      <button onClick={() => submit({})}>Generate</button>
-
+      <div className="flex gap-4">
+        <button
+          onClick={() => submitGenerate({})}
+          disabled={isLoading}
+          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:bg-blue-300 disabled:cursor-not-allowed flex-1"
+        >
+          {isGenerating ? 'Generating...' : 'Generate Holiday'}
+        </button>
+        <button
+          onClick={() => submitStream({})}
+          disabled={isLoading}
+          className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:bg-green-300 disabled:cursor-not-allowed flex-1"
+        >
+          {isStreaming ? 'Streaming...' : 'Stream Holiday'}
+        </button>
+      </div>
 
       {isLoading && !object && (
         <div className="animate-pulse space-y-4">
